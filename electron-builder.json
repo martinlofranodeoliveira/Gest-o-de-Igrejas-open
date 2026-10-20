@@ -1,0 +1,37 @@
+{
+  "appId": "org.opensource.gestaoigrejas",
+  "productName": "Gest\u00e3o de Igrejas Open",
+  "directories": {
+    "output": "dist-electron",
+    "buildResources": "assets"
+  },
+  "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+  "asarUnpack": [
+    "node_modules/better-sqlite3/**/*"
+  ],
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "package.json"
+  ],
+  "win": {
+    "target": "nsis"
+  },
+  "linux": {
+    "target": "AppImage",
+    "category": "Office"
+  },
+  "mac": {
+    "target": "dmg",
+    "category": "public.app-category.business"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowElevation": true,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Gestao de Igrejas"
+  }
+}

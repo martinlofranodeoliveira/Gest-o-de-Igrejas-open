@@ -1,0 +1,48 @@
+{
+  "name": "gestao-de-igrejas-open",
+  "description": "Church management application",
+  "author": "Church Management Team",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "test": "node tests/test-offline-validation.cjs && node tests/test-main-integration.cjs && node tests/test_sqlite_payload.cjs && tsx tests/test_data_format.ts && tsx tests/test_auth_sqlite.ts && tsx tests/test_repo_sqlite.ts && node tests/test_backup_restore.cjs && tsx tests/test_media_service.ts && node tests/test_open_edition.cjs && node --test tests/test_first_account.cjs && tsx tests/test_browser_account.ts",
+    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev:desktop": "node scripts/dev-desktop.cjs",
+    "build": "vite build && electron-builder",
+    "start": "electron .",
+    "preview": "vite preview",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit",
+    "dist:win": "vite build && electron-builder --win",
+    "dist:linux": "vite build && electron-builder --linux",
+    "dist:mac": "vite build && electron-builder --mac",
+    "version:bump": "npm version patch",
+    "build:web": "vite build"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-react": "^5.0.4",
+    "better-sqlite3": "^12.8.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.546.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwind-merge": "^3.5.0",
+    "vite": "^6.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.17",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.21",
+    "electron": "^41.1.1",
+    "electron-builder": "^26.8.1",
+    "tailwindcss": "^4.1.14",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  },
+  "license": "MIT"
+}

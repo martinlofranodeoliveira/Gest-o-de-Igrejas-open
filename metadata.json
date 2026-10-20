@@ -1,0 +1,5 @@
+{
+  "name": "ZelloLife - Gestão de Igrejas",
+  "description": "Aplicativo completo para gestão de igrejas, membros, finanças, eventos e biblioteca bíblica.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"]
+}

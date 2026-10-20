@@ -1,0 +1,28 @@
+name: Offline application checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  mock-tests-and-web-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Install isolation runtime
+        run: sudo apt-get update -qq && sudo apt-get install -y bubblewrap
+      - name: Install dependency packages without lifecycle scripts
+        run: npm ci --ignore-scripts --registry=https://registry.npmjs.org --no-audit --no-fund
+      - name: Test, check and build offline
+        # Only this ephemeral hosted runner uses sudo for namespace setup.
+        # Application checks have no effective capabilities or network access.
+        run: sudo -n -- /usr/bin/python3 scripts/checks-offline.py --node "$(command -v node)" --npm-cli "$(readlink -f "$(command -v npm)")" --dependencies "$GITHUB_WORKSPACE/node_modules"
