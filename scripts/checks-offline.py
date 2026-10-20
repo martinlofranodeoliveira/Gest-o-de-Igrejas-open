@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import shutil
 import socket
+import stat
 import subprocess
 import tempfile
 
@@ -40,6 +41,35 @@ def files(root):
 def hashes(root):
     return {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
             for path in files(root)}
+
+
+def dependency_manifest(root):
+    """Hash regular files and link text, never dereference package symlinks."""
+    result = {}
+    for directory, names, filenames in os.walk(root, followlinks=False):
+        for name in sorted(names + filenames):
+            path = Path(directory) / name
+            info = path.lstat()
+            key = str(path.relative_to(root))
+            if stat.S_ISLNK(info.st_mode):
+                result[key] = ('symlink', os.readlink(path))
+            elif stat.S_ISDIR(info.st_mode):
+                result[key] = ('directory', stat.S_IMODE(info.st_mode))
+            elif stat.S_ISREG(info.st_mode):
+                if info.st_mode & (stat.S_ISUID | stat.S_ISGID):
+                    raise ValueError('Privileged dependency executables are not admitted')
+                result[key] = ('file', stat.S_IMODE(info.st_mode),
+                               hashlib.sha256(path.read_bytes()).hexdigest())
+            else:
+                raise ValueError('Special dependency files are not admitted')
+    return result
+
+
+def copy_dependency(source, target):
+    # npm test invokes .bin links: retain executable bits, not ownership/xattrs.
+    shutil.copyfile(source, target)
+    os.chmod(target, stat.S_IMODE(os.stat(source).st_mode))
+    return target
 
 
 def probe():
@@ -140,6 +170,7 @@ def main():
         parser.error('Expected the trusted npm package bin/npm-cli.js entry point')
     npm_root = npm_cli.parent.parent
     before = hashes(ROOT)
+    dependencies_before = dependency_manifest(dependencies)
     with tempfile.TemporaryDirectory(prefix='gest-public-check-') as temporary:
         scratch = Path(temporary)
         snapshot = scratch / 'source'
@@ -149,17 +180,26 @@ def main():
             shutil.copyfile(source, target)
         (scratch / 'hosts').write_text('127.0.0.1 localhost\n::1 localhost\n')
         (scratch / 'nsswitch.conf').write_text('hosts: files\n')
+        # A sudo-launched user namespace cannot traverse another user's private
+        # checkout directories after dropping capabilities. Stage packages into
+        # this launcher's private temporary directory instead of relaxing access.
+        staged_dependencies = scratch / 'node_modules'
+        shutil.copytree(dependencies, staged_dependencies, symlinks=True,
+                        copy_function=copy_dependency)
+        assert dependency_manifest(staged_dependencies) == dependencies_before
         assert hashes(snapshot) == before
-        command = prefix(snapshot, dependencies, node, npm_root, scratch)
+        command = prefix(snapshot, staged_dependencies, node, npm_root, scratch)
         command += ['--chdir', '/work', '--', '/usr/bin/python3',
                     '/work/scripts/checks-offline.py', '--inner', '--npm-cli', str(npm_cli)]
         result = subprocess.run(command, env={'PATH': '/usr/bin:/bin'}, timeout=600,
                                 stdin=subprocess.DEVNULL)
         assert hashes(snapshot) == before, 'Snapshot changed during isolated checks'
         assert hashes(ROOT) == before, 'Source changed during isolated checks'
+        assert dependency_manifest(staged_dependencies) == dependencies_before, 'Staged dependencies changed'
+        assert dependency_manifest(dependencies) == dependencies_before, 'Original dependencies changed'
         if result.returncode:
             raise SystemExit(result.returncode)
-    print('Public tests, TypeScript and web build passed; source hashes preserved. '
+    print('Public tests, TypeScript and web build passed; source and dependency hashes preserved. '
           'No private home, credentials or external network were available.')
 
 
