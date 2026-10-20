@@ -22,3 +22,7 @@ uploads/*
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+
+# Python cache
+__pycache__/
+*.pyc
