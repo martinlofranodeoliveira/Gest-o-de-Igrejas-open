@@ -115,6 +115,7 @@ def inner(npm_cli):
         print(label + ':', flush=True)
         subprocess.run(command, check=True, timeout=180, stdin=subprocess.DEVNULL)
     assert Path('/tmp/gest-web-dist/index.html').is_file()
+    subprocess.run(['/usr/bin/python3', '/work/scripts/run-lab-tests.py', 'Gest-o-de-Igrejas-open', 'all'], check=True, timeout=180, stdin=subprocess.DEVNULL)
 
 
 def prefix(snapshot, dependencies, node, npm_root, scratch):

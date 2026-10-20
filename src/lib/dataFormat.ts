@@ -26,12 +26,19 @@ export function normalizeDateValue(value: unknown): string {
   }
 
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-    return raw;
+    const year = Number(raw.slice(0, 4));
+    const month = Number(raw.slice(5, 7));
+    const day = Number(raw.slice(8, 10));
+    return isValidDateParts(year, month, day) ? raw : '';
   }
 
   const isoWithTime = raw.match(/^(\d{4}-\d{2}-\d{2})[T\s]/);
   if (isoWithTime) {
-    return isoWithTime[1];
+    const isoDate = isoWithTime[1];
+    const year = Number(isoDate.slice(0, 4));
+    const month = Number(isoDate.slice(5, 7));
+    const day = Number(isoDate.slice(8, 10));
+    return isValidDateParts(year, month, day) ? isoDate : '';
   }
 
   const slashDate = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
