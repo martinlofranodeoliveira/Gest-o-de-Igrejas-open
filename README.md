@@ -182,3 +182,83 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_member_email_duplicate_groups_core.test.mjs`.
+
+
+<!-- community-core:tithe-amount-totals-core -->
+### Tithe Amount Totals In-Memory Core
+
+Complements the existing member import preview and Tithe amount and status shapes by totalling contribution draft amounts already held in memory before manual review. Gives bounded valid missing invalid amount counts with exact totals overall and for Confirmado and Pendente with no persistence confirmation validation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/tithe_amount_totals_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_TITHE_AMOUNT_TOTALS_ROOT. If array length exceeds 1000 throw RangeError with message TITHE_AMOUNT_TOTALS_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 amountValidCount 0 amountMissingCount 0 amountInvalidCount 0 amountTotal 0 confirmadoCount 0 pendenteCount 0 statusEmptyCount 0 statusUnknownCount 0 confirmadoTotal 0 pendenteTotal 0. Iterate payload with for-of and local counters and totals; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for amount and status counts. Each object row increments validRowCount once and is observed only via for-of over Object.entries with entry[0] and entry[1] for keys amount and status by comparing entry[0] with triple equals against amount and status without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id memberId memberName paymentMethod contributionDate notes createdAt. If no amount entry exists increment amountMissingCount once. Else if entry[1] typeof not number or entry[1] !== entry[1] or entry[1] < 0 or entry[1] > 1000000000 increment amountInvalidCount once with no trim coercion folding translation validation or escaping. Else increment amountValidCount once and add entry[1] to amountTotal. If no status entry exists increment statusEmptyCount once. Else if entry[1] exactly Confirmado increment confirmadoCount once and if amount was valid add same amount to confirmadoTotal, else if exactly Pendente increment pendenteCount once and if amount was valid add same amount to pendenteTotal, else increment statusUnknownCount once with no trim coercion folding translation validation or escaping and typeof non-string counts as unknown. Values never copied except numeric addition to local totals. Return fresh JSON-compatible object built with an object literal holding exactly rowCount invalidRowCount validRowCount amountValidCount amountMissingCount amountInvalidCount amountTotal confirmadoCount pendenteCount statusEmptyCount statusUnknownCount confirmadoTotal pendenteTotal where rowCount equals validRowCount plus invalidRowCount and amountValidCount plus amountMissingCount plus amountInvalidCount equals validRowCount and confirmadoCount plus pendenteCount plus statusEmptyCount plus statusUnknownCount equals validRowCount. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding the result cancels with nothing written. Totalling only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "amount": 100,
+      "status": "Confirmado"
+    },
+    {
+      "amount": 50.5,
+      "status": "Pendente"
+    },
+    {
+      "amount": 20,
+      "status": "Confirmado"
+    }
+  ],
+  "output": {
+    "amountInvalidCount": 0,
+    "amountMissingCount": 0,
+    "amountTotal": 170.5,
+    "amountValidCount": 3,
+    "confirmadoCount": 2,
+    "confirmadoTotal": 120,
+    "invalidRowCount": 0,
+    "pendenteCount": 1,
+    "pendenteTotal": 50.5,
+    "rowCount": 3,
+    "statusEmptyCount": 0,
+    "statusUnknownCount": 0,
+    "validRowCount": 3
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {},
+    {
+      "amount": "10",
+      "status": "X"
+    },
+    {
+      "amount": -5,
+      "status": "Confirmado"
+    }
+  ],
+  "output": {
+    "amountInvalidCount": 2,
+    "amountMissingCount": 1,
+    "amountTotal": 0,
+    "amountValidCount": 0,
+    "confirmadoCount": 1,
+    "confirmadoTotal": 0,
+    "invalidRowCount": 1,
+    "pendenteCount": 0,
+    "pendenteTotal": 0,
+    "rowCount": 4,
+    "statusEmptyCount": 1,
+    "statusUnknownCount": 1,
+    "validRowCount": 3
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_tithe_amount_totals_core.test.mjs`.
