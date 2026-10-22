@@ -392,3 +392,71 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_member_tither_summary_core.test.mjs`.
+
+
+<!-- community-core:tithe-member-groups-core -->
+### Tithe Member Groups In-Memory Core
+
+Complements the existing member import preview, email duplicate groups, tithe amount totals and payment method summaries which validate rows, group emails and total amounts but do not reveal repeat contributions by grouping in-memory contribution drafts sharing the exact memberId before manual review. Returns only index groups with no persistence, confirmation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/tithe_member_groups_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_TITHE_MEMBER_GROUPS_ROOT. If array length exceeds 1000 throw RangeError with message TITHE_MEMBER_GROUPS_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 groupCount 0 groupedRowCount 0 groups empty. Iterate payload with for-of and a local index counter starting at 0; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for grouping. Each object row increments validRowCount once and is observed only via for-of over Object.entries for key memberId by comparing entry[0] with triple equals against memberId without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id memberName amount paymentMethod contributionDate status notes createdAt. Access entry value only via literal indices entry[0] and entry[1]. If no memberId entry exists or its value typeof not string or its length equals 0 then ignore row for grouping with no trim coercion folding translation validation or escaping. Otherwise use exact string value as Map key with Map get and Map set and arrays built with array literals and push: if Map get returns undefined then build fresh array with index pushed then Map set; else push index onto retrieved array. Values never copied except as Map keys held locally during call. After iteration build groups array with push of fresh arrays each holding indexes in ascending iteration order with length at least 2; groups ordered by first index ascending which equals first-seen order. Set groupCount to groups length and groupedRowCount to sum of lengths of grouped arrays. Return fresh JSON-compatible object built with an object literal holding exactly rowCount invalidRowCount validRowCount groupCount groupedRowCount groups where rowCount equals validRowCount plus invalidRowCount. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding the result cancels with nothing written. Grouping only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "memberId": "m-1"
+    },
+    {
+      "memberId": "m-2"
+    },
+    {
+      "memberId": "m-1"
+    }
+  ],
+  "output": {
+    "groupCount": 1,
+    "groupedRowCount": 2,
+    "groups": [
+      [
+        0,
+        2
+      ]
+    ],
+    "invalidRowCount": 0,
+    "rowCount": 3,
+    "validRowCount": 3
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "memberId": ""
+    },
+    {
+      "memberId": "m-9"
+    },
+    {
+      "fullName": "Sintetico"
+    }
+  ],
+  "output": {
+    "groupCount": 0,
+    "groupedRowCount": 0,
+    "groups": [],
+    "invalidRowCount": 1,
+    "rowCount": 4,
+    "validRowCount": 3
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_tithe_member_groups_core.test.mjs`.
