@@ -460,3 +460,102 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_tithe_member_groups_core.test.mjs`.
+
+
+<!-- community-core:member-status-summary-core -->
+### Member Status Summary In-Memory Core
+
+Complements the existing member import preview, email duplicate groups, tithe amount totals, tithe member groups, payment method and tither summaries which validate rows, group duplicates and total amounts but do not show Ativo Inativo Visitante distribution by counting in-memory member drafts per exact status versus missing versus unknown before manual review. Returns only bounded counts with no persistence, confirmation, validation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/member_status_summary_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_MEMBER_STATUS_SUMMARY_ROOT. If array length exceeds 1000 throw RangeError with message MEMBER_STATUS_SUMMARY_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 ativoCount 0 inativoCount 0 visitanteCount 0 statusMissingCount 0 statusUnknownCount 0. Iterate payload with for-of and local counters; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for status counts. Each object row increments validRowCount once and is observed only via for-of over Object.entries for key status by comparing entry[0] with triple equals against status without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id fullName email phone address birthDate baptismDate isTither notes createdAt. Access entry value only via literal indices entry[0] and entry[1]. If no status entry exists increment statusMissingCount once. Else if entry[1] triple equals Ativo increment ativoCount once else if triple equals Inativo increment inativoCount once else if triple equals Visitante increment visitanteCount once else increment statusUnknownCount once with no trim coercion folding translation validation or escaping and typeof non-string counts as unknown including empty string numbers booleans null objects and arrays. Values never copied. Return fresh JSON-compatible object built with an object literal holding exactly rowCount invalidRowCount validRowCount ativoCount inativoCount visitanteCount statusMissingCount statusUnknownCount where rowCount equals validRowCount plus invalidRowCount and ativoCount plus inativoCount plus visitanteCount plus statusMissingCount plus statusUnknownCount equals validRowCount. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding the result cancels with nothing written. Counting only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "status": "Ativo"
+    },
+    {
+      "status": "Inativo"
+    },
+    {
+      "status": "Visitante"
+    }
+  ],
+  "output": {
+    "ativoCount": 1,
+    "inativoCount": 1,
+    "invalidRowCount": 0,
+    "rowCount": 3,
+    "statusMissingCount": 0,
+    "statusUnknownCount": 0,
+    "validRowCount": 3,
+    "visitanteCount": 1
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "fullName": "Sintetico"
+    },
+    {
+      "status": ""
+    },
+    {
+      "status": "Ativo"
+    },
+    {
+      "status": "Desligado"
+    }
+  ],
+  "output": {
+    "ativoCount": 1,
+    "inativoCount": 0,
+    "invalidRowCount": 1,
+    "rowCount": 5,
+    "statusMissingCount": 1,
+    "statusUnknownCount": 2,
+    "validRowCount": 4,
+    "visitanteCount": 0
+  }
+}
+```
+
+```json
+{
+  "input": [
+    {
+      "status": "Ativo"
+    },
+    {
+      "status": "ativo"
+    },
+    {
+      "status": "Inativo "
+    },
+    {
+      "status": null
+    }
+  ],
+  "output": {
+    "ativoCount": 1,
+    "inativoCount": 0,
+    "invalidRowCount": 0,
+    "rowCount": 4,
+    "statusMissingCount": 0,
+    "statusUnknownCount": 3,
+    "validRowCount": 4,
+    "visitanteCount": 0
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_member_status_summary_core.test.mjs`.
