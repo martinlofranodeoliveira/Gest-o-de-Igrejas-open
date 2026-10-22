@@ -329,3 +329,66 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_tithe_payment_method_summary_core.test.mjs`.
+
+
+<!-- community-core:member-tither-summary-core -->
+### Member Tither Summary In-Memory Core
+
+Complements the existing member import preview, email duplicate groups, tithe amount totals and payment method summary which validate rows, group duplicate emails, total amounts and summarize payment methods but do not show dizimista flag distribution by counting in-memory member drafts per exact true versus false versus missing versus unknown isTither before manual review. Returns only bounded counts with no persistence, confirmation, validation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/member_tither_summary_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_MEMBER_TITHER_SUMMARY_ROOT. If array length exceeds 1000 throw RangeError with message MEMBER_TITHER_SUMMARY_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 titherTrueCount 0 titherFalseCount 0 titherMissingCount 0 titherUnknownCount 0. Iterate payload with for-of and local counters; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for tither counts. Each object row increments validRowCount once and is observed only via for-of over Object.entries with entry[0] and entry[1] for key isTither by comparing entry[0] with triple equals against isTither without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id fullName email phone address birthDate baptismDate status notes createdAt. Access entry value only via literal indices entry[0] and entry[1]. If no isTither entry exists increment titherMissingCount once. Else if entry[1] triple equals true increment titherTrueCount once else if entry[1] triple equals false increment titherFalseCount once else increment titherUnknownCount once with no trim coercion folding translation validation or escaping and typeof non-boolean counts as unknown including empty string numbers null objects and arrays. Values never copied. Return fresh JSON-compatible object built with an object literal holding exactly rowCount invalidRowCount validRowCount titherTrueCount titherFalseCount titherMissingCount titherUnknownCount where rowCount equals validRowCount plus invalidRowCount and titherTrueCount plus titherFalseCount plus titherMissingCount plus titherUnknownCount equals validRowCount. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding the result cancels with nothing written. Counting only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "isTither": true
+    },
+    {
+      "isTither": false
+    },
+    {
+      "fullName": "Sintetico"
+    }
+  ],
+  "output": {
+    "invalidRowCount": 0,
+    "rowCount": 3,
+    "titherFalseCount": 1,
+    "titherMissingCount": 1,
+    "titherTrueCount": 1,
+    "titherUnknownCount": 0,
+    "validRowCount": 3
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "isTither": 1
+    },
+    {
+      "isTither": true
+    },
+    []
+  ],
+  "output": {
+    "invalidRowCount": 2,
+    "rowCount": 4,
+    "titherFalseCount": 0,
+    "titherMissingCount": 0,
+    "titherTrueCount": 1,
+    "titherUnknownCount": 1,
+    "validRowCount": 2
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_member_tither_summary_core.test.mjs`.
