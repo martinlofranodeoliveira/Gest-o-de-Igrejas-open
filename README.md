@@ -627,3 +627,78 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_tithe_date_groups_core.test.mjs`.
+
+
+<!-- community-core:member-date-presence-summary-core -->
+### Member Date Presence Summary In-Memory Core
+
+Complements the existing member import preview, email duplicate groups, member status/tither summaries and tithe amount/member/date/payment cores which validate rows, group repeats and total amounts but do not reveal birthDate/baptismDate completeness by counting in-memory member drafts as missing/empty/present/unknown before manual review. Returns only bounded counts with no persistence, confirmation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/member_date_presence_summary_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_MEMBER_DATE_PRESENCE_ROOT. If array length exceeds 1000 throw RangeError with message MEMBER_DATE_PRESENCE_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 birthMissingCount 0 birthEmptyCount 0 birthPresentCount 0 birthUnknownCount 0 baptismMissingCount 0 baptismEmptyCount 0 baptismPresentCount 0 baptismUnknownCount 0. Iterate payload with for-of and local counters; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for presence counts. Each object row increments validRowCount once and is observed only via for-of over Object.entries for keys birthDate and baptismDate by comparing entry[0] with triple equals against birthDate and baptismDate without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id fullName email phone address status isTither notes createdAt. Access entry value only via literal indices entry[0] and entry[1]. For birthDate if no entry exists increment birthMissingCount once; else if entry[1] typeof not string increment birthUnknownCount once; else if entry[1] length equals 0 increment birthEmptyCount once; else increment birthPresentCount once with no trim coercion folding parsing translation validation or escaping and never using Date. For baptismDate apply same rule to baptismMissingCount baptismUnknownCount baptismEmptyCount baptismPresentCount. Values never copied. Return fresh JSON-compatible object built with an object literal holding exactly rowCount invalidRowCount validRowCount birthMissingCount birthEmptyCount birthPresentCount birthUnknownCount baptismMissingCount baptismEmptyCount baptismPresentCount baptismUnknownCount where rowCount equals validRowCount plus invalidRowCount and birthMissingCount plus birthEmptyCount plus birthPresentCount plus birthUnknownCount equals validRowCount and baptismMissingCount plus baptismEmptyCount plus baptismPresentCount plus baptismUnknownCount equals validRowCount. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding the result cancels with nothing written. Counting only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "baptismDate": "2010-05-06",
+      "birthDate": "1990-01-01"
+    },
+    {
+      "baptismDate": "",
+      "birthDate": ""
+    },
+    {
+      "fullName": "Sintetico"
+    }
+  ],
+  "output": {
+    "baptismEmptyCount": 1,
+    "baptismMissingCount": 1,
+    "baptismPresentCount": 1,
+    "baptismUnknownCount": 0,
+    "birthEmptyCount": 1,
+    "birthMissingCount": 1,
+    "birthPresentCount": 1,
+    "birthUnknownCount": 0,
+    "invalidRowCount": 0,
+    "rowCount": 3,
+    "validRowCount": 3
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "baptismDate": "2020-02-02",
+      "birthDate": 123
+    },
+    {
+      "baptismDate": null,
+      "birthDate": ""
+    },
+    []
+  ],
+  "output": {
+    "baptismEmptyCount": 0,
+    "baptismMissingCount": 0,
+    "baptismPresentCount": 1,
+    "baptismUnknownCount": 1,
+    "birthEmptyCount": 1,
+    "birthMissingCount": 0,
+    "birthPresentCount": 0,
+    "birthUnknownCount": 1,
+    "invalidRowCount": 2,
+    "rowCount": 4,
+    "validRowCount": 2
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_member_date_presence_summary_core.test.mjs`.
