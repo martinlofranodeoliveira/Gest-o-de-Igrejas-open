@@ -778,3 +778,76 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_member_contact_presence_summary_core.test.mjs`.
+
+
+<!-- community-core:member-address-notes-presence-summary-core -->
+### Member Address Notes Presence Summary In-Memory Core
+
+Complements the existing member import preview, email duplicate groups, status/tither/contact/date-presence summaries and tithe amount/member/date/payment cores which validate rows, group repeats and total amounts but do not reveal address/notes completeness by counting in-memory member drafts as missing/empty/present/unknown before manual review. Returns only bounded counts with no persistence, confirmation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/member_address_notes_presence_summary_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_MEMBER_ADDRESS_NOTES_PRESENCE_ROOT. If array length exceeds 1000 throw RangeError with message MEMBER_ADDRESS_NOTES_PRESENCE_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 addressMissingCount 0 addressEmptyCount 0 addressPresentCount 0 addressUnknownCount 0 notesMissingCount 0 notesEmptyCount 0 notesPresentCount 0 notesUnknownCount 0. Iterate payload with for-of and local counters; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for presence counts. Each object row increments validRowCount once and is observed only via for-of over Object.entries for keys address and notes by comparing entry[0] with triple equals against address and notes without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id fullName email phone birthDate baptismDate status isTither createdAt. Access entry value only via literal indices entry[0] and entry[1]. For address if no entry exists increment addressMissingCount once; else if entry[1] typeof not string increment addressUnknownCount once; else if entry[1] length equals 0 increment addressEmptyCount once; else increment addressPresentCount once with no trim coercion folding parsing translation validation or escaping and never using Date. For notes apply same rule to notesMissingCount notesUnknownCount notesEmptyCount notesPresentCount. Values never copied. Return fresh JSON-compatible object built with an object literal holding exactly rowCount invalidRowCount validRowCount addressMissingCount addressEmptyCount addressPresentCount addressUnknownCount notesMissingCount notesEmptyCount notesPresentCount notesUnknownCount where rowCount equals validRowCount plus invalidRowCount and addressMissingCount plus addressEmptyCount plus addressPresentCount plus addressUnknownCount equals validRowCount and notesMissingCount plus notesEmptyCount plus notesPresentCount plus notesUnknownCount equals validRowCount. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding the result cancels with nothing written. Counting only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "address": "Rua A",
+      "notes": "rascunho"
+    },
+    {
+      "address": "",
+      "notes": ""
+    },
+    {
+      "address": "Rua A"
+    }
+  ],
+  "output": {
+    "addressEmptyCount": 1,
+    "addressMissingCount": 0,
+    "addressPresentCount": 2,
+    "addressUnknownCount": 0,
+    "invalidRowCount": 0,
+    "notesEmptyCount": 1,
+    "notesMissingCount": 1,
+    "notesPresentCount": 1,
+    "notesUnknownCount": 0,
+    "rowCount": 3,
+    "validRowCount": 3
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "address": 123,
+      "notes": ""
+    },
+    {
+      "fullName": "Sintetico"
+    }
+  ],
+  "output": {
+    "addressEmptyCount": 0,
+    "addressMissingCount": 1,
+    "addressPresentCount": 0,
+    "addressUnknownCount": 1,
+    "invalidRowCount": 1,
+    "notesEmptyCount": 1,
+    "notesMissingCount": 1,
+    "notesPresentCount": 0,
+    "notesUnknownCount": 0,
+    "rowCount": 3,
+    "validRowCount": 2
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_member_address_notes_presence_summary_core.test.mjs`.
