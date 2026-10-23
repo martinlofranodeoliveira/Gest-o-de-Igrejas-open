@@ -1064,3 +1064,71 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_tithe_member_linkage_presence_summary_core.test.mjs`.
+
+
+<!-- community-core:tithe-contribution-date-shape-core -->
+### Tithe Contribution-Date Shape In-Memory Core
+
+Complements the existing member import preview, member email/fullName/phone duplicate groups, member status/tither/contact/date/address-notes summaries and tithe amount/member/date/payment/linkage cores which validate rows, group repeats, total amounts and count linkage but do not reveal tithe contributionDate completeness and shape by counting in-memory tithe drafts as missing/empty/valid/invalid/unknown before manual review. Returns only bounded counts with no persistence, confirmation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/tithe_contribution_date_shape_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_TITHE_CONTRIBUTION_DATE_SHAPE_ROOT. If array length exceeds 1000 throw RangeError with message TITHE_CONTRIBUTION_DATE_SHAPE_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 dateMissingCount 0 dateEmptyCount 0 dateValidCount 0 dateInvalidCount 0 dateUnknownCount 0. Iterate payload with for-of and local counters; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for date counts. Each object row increments validRowCount once and is observed only via for-of over Object.entries for key contributionDate by comparing entry[0] with triple equals against contributionDate without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id memberId memberName amount paymentMethod status notes createdAt. Access entry key and value only via literal indices entry[0] and entry[1]. If no contributionDate entry exists increment dateMissingCount once; else if entry[1] typeof not string increment dateUnknownCount once; else if entry[1] length equals 0 increment dateEmptyCount once; else if entry[1] length equals 10 and entry[1] dash positions and digit positions hold with value[4] triple equals - and value[7] triple equals - and each of value[0] value[1] value[2] value[3] value[5] value[6] value[8] value[9] triple equals one of 0 1 2 3 4 5 6 7 8 9 and month 01 to 12 and day 01 to 31 and year 0100 to 9999 with year not 0000 then increment dateValidCount once with no trim coercion folding parsing translation validation escaping or Date use; else increment dateInvalidCount once. Values never copied. Return fresh JSON-compatible object built with an object literal holding exactly rowCount invalidRowCount validRowCount dateMissingCount dateEmptyCount dateValidCount dateInvalidCount dateUnknownCount where rowCount equals validRowCount plus invalidRowCount and dateMissingCount plus dateEmptyCount plus dateValidCount plus dateInvalidCount plus dateUnknownCount equals validRowCount. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding the result cancels with nothing written. Counting only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "contributionDate": "2024-02-29"
+    },
+    {
+      "contributionDate": ""
+    },
+    {
+      "contributionDate": "2024-13-01"
+    },
+    {}
+  ],
+  "output": {
+    "dateEmptyCount": 1,
+    "dateInvalidCount": 1,
+    "dateMissingCount": 1,
+    "dateUnknownCount": 0,
+    "dateValidCount": 1,
+    "invalidRowCount": 0,
+    "rowCount": 4,
+    "validRowCount": 4
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "contributionDate": 123
+    },
+    {
+      "contributionDate": "2023-05-09"
+    },
+    {
+      "amount": 10
+    }
+  ],
+  "output": {
+    "dateEmptyCount": 0,
+    "dateInvalidCount": 0,
+    "dateMissingCount": 1,
+    "dateUnknownCount": 1,
+    "dateValidCount": 1,
+    "invalidRowCount": 1,
+    "rowCount": 4,
+    "validRowCount": 3
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_tithe_contribution_date_shape_core.test.mjs`.
