@@ -702,3 +702,79 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_member_date_presence_summary_core.test.mjs`.
+
+
+<!-- community-core:member-contact-presence-summary-core -->
+### Member Contact Presence Summary In-Memory Core
+
+Complements the existing member import preview, email duplicate groups, status/tither/date-presence summaries and tithe amount/member/date/payment cores which validate rows, group repeats and total amounts but do not reveal email/phone completeness by counting in-memory member drafts as missing/empty/present/unknown before manual review. Returns only bounded counts with no persistence, confirmation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/member_contact_presence_summary_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_MEMBER_CONTACT_PRESENCE_ROOT. If array length exceeds 1000 throw RangeError with message MEMBER_CONTACT_PRESENCE_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 emailMissingCount 0 emailEmptyCount 0 emailPresentCount 0 emailUnknownCount 0 phoneMissingCount 0 phoneEmptyCount 0 phonePresentCount 0 phoneUnknownCount 0. Iterate payload with for-of and local counters; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for presence counts. Each object row increments validRowCount once and is observed only via for-of over Object.entries for keys email and phone by comparing entry[0] with triple equals against email and phone without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id fullName address birthDate baptismDate status isTither notes createdAt. Access entry value only via literal indices entry[0] and entry[1]. For email if no entry exists increment emailMissingCount once; else if entry[1] typeof not string increment emailUnknownCount once; else if entry[1] length equals 0 increment emailEmptyCount once; else increment emailPresentCount once with no trim coercion folding parsing translation validation or escaping and never using Date. For phone apply same rule to phoneMissingCount phoneUnknownCount phoneEmptyCount phonePresentCount. Values never copied. Return fresh JSON-compatible object built with an object literal holding exactly rowCount invalidRowCount validRowCount emailMissingCount emailEmptyCount emailPresentCount emailUnknownCount phoneMissingCount phoneEmptyCount phonePresentCount phoneUnknownCount where rowCount equals validRowCount plus invalidRowCount and emailMissingCount plus emailEmptyCount plus emailPresentCount plus emailUnknownCount equals validRowCount and phoneMissingCount plus phoneEmptyCount plus phonePresentCount plus phoneUnknownCount equals validRowCount. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding the result cancels with nothing written. Counting only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "email": "a@exemplo.test",
+      "phone": "111"
+    },
+    {
+      "email": "",
+      "phone": ""
+    },
+    {
+      "fullName": "Sintetico"
+    }
+  ],
+  "output": {
+    "emailEmptyCount": 1,
+    "emailMissingCount": 1,
+    "emailPresentCount": 1,
+    "emailUnknownCount": 0,
+    "invalidRowCount": 0,
+    "phoneEmptyCount": 1,
+    "phoneMissingCount": 1,
+    "phonePresentCount": 1,
+    "phoneUnknownCount": 0,
+    "rowCount": 3,
+    "validRowCount": 3
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "email": 123,
+      "phone": null
+    },
+    {
+      "email": "x@exemplo.test"
+    },
+    {
+      "phone": ""
+    }
+  ],
+  "output": {
+    "emailEmptyCount": 0,
+    "emailMissingCount": 1,
+    "emailPresentCount": 1,
+    "emailUnknownCount": 1,
+    "invalidRowCount": 1,
+    "phoneEmptyCount": 1,
+    "phoneMissingCount": 1,
+    "phonePresentCount": 0,
+    "phoneUnknownCount": 1,
+    "rowCount": 4,
+    "validRowCount": 3
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_member_contact_presence_summary_core.test.mjs`.
