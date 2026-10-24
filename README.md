@@ -1657,3 +1657,71 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_member_birthdate_shape_core.test.mjs`.
+
+
+<!-- community-core:member-fullname-shape-core -->
+### Member FullName Shape In-Memory Core
+
+Complements the existing member import preview, member birthDate/baptismDate shapes, email/fullName/phone/address duplicate groups, status/tither/contact/date/address-notes summaries and tithe amount/member/date/payment/linkage/date-shape/notes cores which validate rows, total amounts and group repeats but do not give standalone fullName presence and length totals before manual review. Returns only bounded valid/empty/missing/tooLong/invalid counts with no persistence, confirmation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/member_fullname_shape_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_MEMBER_FULLNAME_SHAPE_ROOT. If array length exceeds 1000 throw RangeError with message MEMBER_FULLNAME_SHAPE_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 fullNameValidCount 0 fullNameEmptyCount 0 fullNameMissingCount 0 fullNameTooLongCount 0 fullNameInvalidCount 0. Iterate payload with for-of and local counters; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for shape counting. Each object row increments validRowCount once and is observed only via for-of over Object.entries for key fullName by comparing entry[0] with triple equals against fullName without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id email phone address birthDate baptismDate status isTither notes createdAt. Access entry key and value only via literal indices entry[0] and entry[1]. Determine kind with no trim coercion folding translation validation or escaping: if no fullName entry then missing; else if typeof entry[1] not string then invalid; else if entry[1].length equals 0 then empty; else if entry[1].length greater than 120 then tooLong; else valid. Increment exactly one of fullNameValidCount fullNameEmptyCount fullNameMissingCount fullNameTooLongCount fullNameInvalidCount per valid row. Return fresh JSON-compatible object built with an object literal holding exactly rowCount invalidRowCount validRowCount fullNameValidCount fullNameEmptyCount fullNameMissingCount fullNameTooLongCount fullNameInvalidCount where rowCount equals validRowCount plus invalidRowCount and validRowCount equals sum of five shape counters. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding the result cancels with nothing written. Counting only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "fullName": "Maria Sintetica"
+    },
+    {
+      "fullName": ""
+    },
+    {
+      "email": "a@exemplo.test"
+    }
+  ],
+  "output": {
+    "fullNameEmptyCount": 1,
+    "fullNameInvalidCount": 0,
+    "fullNameMissingCount": 1,
+    "fullNameTooLongCount": 0,
+    "fullNameValidCount": 1,
+    "invalidRowCount": 0,
+    "rowCount": 3,
+    "validRowCount": 3
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "fullName": 123
+    },
+    {
+      "extra": 1,
+      "fullName": "Joao Sintetico"
+    },
+    {
+      "fullName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ],
+  "output": {
+    "fullNameEmptyCount": 0,
+    "fullNameInvalidCount": 1,
+    "fullNameMissingCount": 0,
+    "fullNameTooLongCount": 1,
+    "fullNameValidCount": 1,
+    "invalidRowCount": 1,
+    "rowCount": 4,
+    "validRowCount": 3
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_member_fullname_shape_core.test.mjs`.
