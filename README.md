@@ -1594,3 +1594,66 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_member_baptismdate_shape_core.test.mjs`.
+
+
+<!-- community-core:member-birthdate-shape-core -->
+### Member BirthDate Shape In-Memory Core
+
+Complements the existing member import preview, member baptismDate shape, member email/fullName/phone/address duplicate groups, member status/tither/contact/date/address-notes presence summaries and tithe amount/member/date/payment/linkage/date-shape/notes cores which validate rows, total amounts and group repeats but do not give standalone birthDate shape totals before manual review. Returns only bounded valid/empty/missing/invalid counts with no persistence, confirmation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/member_birthdate_shape_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_MEMBER_BIRTHDATE_SHAPE_ROOT. If array length exceeds 1000 throw RangeError with message MEMBER_BIRTHDATE_SHAPE_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 birthDateValidCount 0 birthDateEmptyCount 0 birthDateMissingCount 0 birthDateInvalidCount 0. Iterate payload with for-of and local counters; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for shape counting. Each object row increments validRowCount once and is observed only via for-of over Object.entries for key birthDate by comparing entry[0] with triple equals against birthDate without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id email fullName phone address baptismDate status isTither notes createdAt. Access entry key and value only via literal indices entry[0] and entry[1]. Determine kind with no trim coercion folding translation validation or escaping: if no birthDate entry then missing; else if typeof entry[1] not string then invalid; else if entry[1].length equals 0 then empty; else check exact shape with only length and charCodeAt and triple equals without Date RegExp or callbacks: length must equal 10 and entry[1] chars at literal indices 4 and 7 must triple-equal dash and chars at literal indices 0 1 2 3 5 6 8 9 must be ASCII digits 0 to 9 via charCodeAt range checks, otherwise invalid; compute year month day arithmetically from digit codes then require year 100 to 9999 month 1 to 12 day 1 to month length where February length is 29 on leap year else 28 with leap year true when year divisible by 400 or divisible by 4 but not by 100 using remainder checks, otherwise invalid; else valid. Increment exactly one of birthDateValidCount birthDateEmptyCount birthDateMissingCount birthDateInvalidCount per valid row. Return fresh JSON-compatible object built with an object literal holding exactly rowCount invalidRowCount validRowCount birthDateValidCount birthDateEmptyCount birthDateMissingCount birthDateInvalidCount where rowCount equals validRowCount plus invalidRowCount and validRowCount equals sum of four shape counters. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding the result cancels with nothing written. Counting only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "birthDate": "2000-02-29"
+    },
+    {
+      "birthDate": ""
+    },
+    {},
+    {
+      "birthDate": "2023-02-30"
+    }
+  ],
+  "output": {
+    "birthDateEmptyCount": 1,
+    "birthDateInvalidCount": 1,
+    "birthDateMissingCount": 1,
+    "birthDateValidCount": 1,
+    "invalidRowCount": 0,
+    "rowCount": 4,
+    "validRowCount": 4
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "birthDate": 123
+    },
+    {
+      "birthDate": "0100-01-01"
+    }
+  ],
+  "output": {
+    "birthDateEmptyCount": 0,
+    "birthDateInvalidCount": 1,
+    "birthDateMissingCount": 0,
+    "birthDateValidCount": 1,
+    "invalidRowCount": 1,
+    "rowCount": 3,
+    "validRowCount": 2
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_member_birthdate_shape_core.test.mjs`.
