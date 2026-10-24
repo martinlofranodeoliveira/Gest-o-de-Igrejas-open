@@ -1266,3 +1266,95 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_member_address_duplicate_groups_core.test.mjs`.
+
+
+<!-- community-core:member-status-tither-cross-summary-core -->
+### Member Status Tither Cross Summary In-Memory Core
+
+Complements the existing member import preview, member email/fullName/phone/address duplicate groups, member status/tither/contact/date/address-notes presence summaries and tithe amount/member/date/payment/linkage/date-shape/notes cores which validate rows, total amounts and group other repeats but do not reveal how tither flags distribute across Ativo/Inativo/Visitante versus empty or unknown status before manual review. Returns only bounded counts with no persistence, confirmation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/member_status_tither_cross_summary_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_MEMBER_STATUS_TITHER_CROSS_ROOT. If array length exceeds 1000 throw RangeError with message MEMBER_STATUS_TITHER_CROSS_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 and all fifteen cross counters 0. Iterate payload with for-of and local counters; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for cross counting. Each object row increments validRowCount once and is observed only via for-of over Object.entries for keys status and isTither by comparing entry[0] with triple equals against status and isTither without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id fullName email phone address birthDate baptismDate notes createdAt. Access entry key and value only via literal indices entry[0] and entry[1]. Determine statusKind with no trim coercion folding translation validation or escaping: if no status entry then empty; else if value triple equals Ativo then ativo; else if triple equals Inativo then inativo; else if triple equals Visitante then visitante; else if triple equals empty string then empty; else unknown. Determine titherKind with no coercion: if no isTither entry then other; else if value triple equals true then true; else if value triple equals false then false; else other. Increment exactly one of fifteen counters: ativoTrueCount ativoFalseCount ativoOtherCount inativoTrueCount inativoFalseCount inativoOtherCount visitanteTrueCount visitanteFalseCount visitanteOtherCount emptyTrueCount emptyFalseCount emptyOtherCount unknownTrueCount unknownFalseCount unknownOtherCount. Return fresh JSON-compatible object built with an object literal holding exactly rowCount invalidRowCount validRowCount ativoTrueCount ativoFalseCount ativoOtherCount inativoTrueCount inativoFalseCount inativoOtherCount visitanteTrueCount visitanteFalseCount visitanteOtherCount emptyTrueCount emptyFalseCount emptyOtherCount unknownTrueCount unknownFalseCount unknownOtherCount where rowCount equals validRowCount plus invalidRowCount and validRowCount equals sum of fifteen cross counters. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding the result cancels with nothing written. Counting only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "isTither": true,
+      "status": "Ativo"
+    },
+    {
+      "isTither": false,
+      "status": "Ativo"
+    },
+    {
+      "isTither": true,
+      "status": "Inativo"
+    }
+  ],
+  "output": {
+    "ativoFalseCount": 1,
+    "ativoOtherCount": 0,
+    "ativoTrueCount": 1,
+    "emptyFalseCount": 0,
+    "emptyOtherCount": 0,
+    "emptyTrueCount": 0,
+    "inativoFalseCount": 0,
+    "inativoOtherCount": 0,
+    "inativoTrueCount": 1,
+    "invalidRowCount": 0,
+    "rowCount": 3,
+    "unknownFalseCount": 0,
+    "unknownOtherCount": 0,
+    "unknownTrueCount": 0,
+    "validRowCount": 3,
+    "visitanteFalseCount": 0,
+    "visitanteOtherCount": 0,
+    "visitanteTrueCount": 0
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "fullName": "Sintetico"
+    },
+    {
+      "isTither": "yes",
+      "status": ""
+    },
+    {
+      "isTither": true,
+      "status": "Desconhecido"
+    }
+  ],
+  "output": {
+    "ativoFalseCount": 0,
+    "ativoOtherCount": 0,
+    "ativoTrueCount": 0,
+    "emptyFalseCount": 0,
+    "emptyOtherCount": 2,
+    "emptyTrueCount": 0,
+    "inativoFalseCount": 0,
+    "inativoOtherCount": 0,
+    "inativoTrueCount": 0,
+    "invalidRowCount": 1,
+    "rowCount": 4,
+    "unknownFalseCount": 0,
+    "unknownOtherCount": 0,
+    "unknownTrueCount": 1,
+    "validRowCount": 3,
+    "visitanteFalseCount": 0,
+    "visitanteOtherCount": 0,
+    "visitanteTrueCount": 0
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_member_status_tither_cross_summary_core.test.mjs`.
