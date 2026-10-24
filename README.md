@@ -1446,3 +1446,88 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_tithe_payment_status_cross_summary_core.test.mjs`.
+
+
+<!-- community-core:tithe-exact-duplicate-groups-core -->
+### Tithe Exact Duplicate Groups In-Memory Core
+
+Complements the existing member import preview, member email/fullName/phone/address duplicate groups, member status/tither/contact/date presence and cross summaries and tithe amount/member/date/payment/linkage/date-shape/notes cores which validate rows, total amounts and group single-field repeats but do not detect possible double-entered contribution drafts sharing the same member, date and amount before manual review. Returns only index groups with no persistence, confirmation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/tithe_exact_duplicate_groups_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_TITHE_EXACT_DUPLICATE_ROOT. If array length exceeds 1000 throw RangeError with message TITHE_EXACT_DUPLICATE_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 groupCount 0 duplicateRowCount 0 groups empty. Iterate payload with for-of and a local index counter starting at 0; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for grouping. Each object row increments validRowCount once and is observed only via for-of over Object.entries for keys memberId and contributionDate and amount by comparing entry[0] with triple equals against memberId and contributionDate and amount without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id memberName paymentMethod status notes createdAt. Access entry key and value only via literal indices entry[0] and entry[1]. For grouping eligibility with no trim coercion folding translation validation or escaping: if no memberId entry exists or its value typeof not string or its length equals 0 then ignore row for grouping; else if no contributionDate entry exists or its value typeof not string or its length equals 0 then ignore row for grouping; else if no amount entry exists or its value typeof not number or direct Number.isFinite check returns false then ignore row for grouping; otherwise use exact memberId string and exact contributionDate string and exact amount number as nested Map keys with Map get and Map set and arrays built with array literals and push: if outer Map get returns undefined then build fresh middle Map and fresh inner Map and fresh array with index pushed then Map set at each level; else if middle Map get returns undefined then build fresh inner Map and fresh array with index pushed then Map set at each remaining level; else if inner Map get returns undefined then build fresh array with index pushed then Map set; else push index onto retrieved array. Values never copied except as Map keys held locally during call. After iteration build groups array with push of fresh arrays each holding indexes in ascending iteration order with length at least 2; groups ordered by first index ascending which equals first-seen order. Set groupCount to groups length and duplicateRowCount to sum of lengths of grouped arrays. Return fresh JSON-compatible object built with an object literal holding exactly rowCount invalidRowCount validRowCount groupCount duplicateRowCount groups where rowCount equals validRowCount plus invalidRowCount. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding the result cancels with nothing written. Grouping only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "amount": 100,
+      "contributionDate": "2024-01-15",
+      "memberId": "m1"
+    },
+    {
+      "amount": 100,
+      "contributionDate": "2024-01-15",
+      "memberId": "m1"
+    },
+    {
+      "amount": 50,
+      "contributionDate": "2024-01-15",
+      "memberId": "m1"
+    }
+  ],
+  "output": {
+    "duplicateRowCount": 2,
+    "groupCount": 1,
+    "groups": [
+      [
+        0,
+        1
+      ]
+    ],
+    "invalidRowCount": 0,
+    "rowCount": 3,
+    "validRowCount": 3
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "amount": 10,
+      "contributionDate": "2024-01-15",
+      "memberId": ""
+    },
+    {
+      "amount": 20,
+      "contributionDate": "2024-02-01",
+      "memberId": "m1"
+    },
+    {
+      "amount": 20,
+      "contributionDate": "2024-02-01",
+      "memberId": "m1"
+    }
+  ],
+  "output": {
+    "duplicateRowCount": 2,
+    "groupCount": 1,
+    "groups": [
+      [
+        2,
+        3
+      ]
+    ],
+    "invalidRowCount": 1,
+    "rowCount": 4,
+    "validRowCount": 3
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_tithe_exact_duplicate_groups_core.test.mjs`.
