@@ -1857,3 +1857,70 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_member_phone_shape_core.test.mjs`.
+
+
+<!-- community-core:tithe-status-summary-core -->
+### Tithe Status Summary In-Memory Core
+
+Complements the existing member import preview, member fullname phone birthDate baptismDate shapes, email fullname phone address duplicate groups, member status tither contact date address-notes presence summaries and tithe amount member date linkage date-shape notes payment-method payment-status-cross totals cores which validate rows, total amounts, group repeats and cross payment with status but do not give standalone Confirmado versus Pendente presence totals before manual review. Returns only bounded confirmado pendente missing unknown invalid status counts with no persistence, confirmation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/tithe_status_summary_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_TITHE_STATUS_SUMMARY_ROOT. If array length exceeds 1000 throw RangeError with message TITHE_STATUS_SUMMARY_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 confirmadoCount 0 pendenteCount 0 statusMissingCount 0 statusUnknownCount 0 statusInvalidCount 0. Iterate payload with for-of and local counters; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for status counting. Each object row increments validRowCount once and is observed only via for-of over Object.entries for key status by comparing entry[0] with triple equals against status without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id memberId memberName amount paymentMethod contributionDate notes createdAt. Access entry key and value only via literal indices entry[0] and entry[1]. Determine kind with no trim coercion folding translation validation or escaping: if no status entry then missing; else if typeof entry[1] not string then invalid; else if entry[1] triple equals Confirmado then confirmado; else if triple equals Pendente then pendente; else unknown. Increment exactly one of confirmadoCount pendenteCount statusMissingCount statusUnknownCount statusInvalidCount per valid row. Return fresh JSON-compatible object built with an object literal holding exactly rowCount invalidRowCount validRowCount confirmadoCount pendenteCount statusMissingCount statusUnknownCount statusInvalidCount where rowCount equals validRowCount plus invalidRowCount and validRowCount equals sum of five status counters. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding the result cancels with nothing written. Counting only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "status": "Confirmado"
+    },
+    {
+      "status": "Pendente"
+    },
+    {
+      "status": "Confirmado"
+    }
+  ],
+  "output": {
+    "confirmadoCount": 2,
+    "invalidRowCount": 0,
+    "pendenteCount": 1,
+    "rowCount": 3,
+    "statusInvalidCount": 0,
+    "statusMissingCount": 0,
+    "statusUnknownCount": 0,
+    "validRowCount": 3
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "memberName": "Sintetico"
+    },
+    {
+      "status": 5
+    },
+    {
+      "status": "Pago"
+    }
+  ],
+  "output": {
+    "confirmadoCount": 0,
+    "invalidRowCount": 1,
+    "pendenteCount": 0,
+    "rowCount": 4,
+    "statusInvalidCount": 1,
+    "statusMissingCount": 1,
+    "statusUnknownCount": 1,
+    "validRowCount": 3
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_tithe_status_summary_core.test.mjs`.
