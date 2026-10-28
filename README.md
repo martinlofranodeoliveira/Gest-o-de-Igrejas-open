@@ -2017,3 +2017,98 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_tithe_member_name_consistency_core.test.mjs`.
+
+
+<!-- community-core:tithe-member-id-match-core -->
+### Tithe Member ID Match In-Memory Core
+
+Complements existing member import preview, tithe member groups, linkage presence and member-name consistency which check single-collection presence or grouping but do not verify contribution draft memberId values against the actual member roster before manual review. Returns only bounded matched, missing and unknown counts plus unmatched tithe indexes with no persistence, confirmation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/tithe_member_id_match_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an object with members and tithes arrays; otherwise throw TypeError with message INVALID_TITHE_MEMBER_MATCH_ROOT. If members or tithes is not an array or payload is null or an array then throw same error. If members length exceeds 1000 or tithes length exceeds 1000 throw RangeError with message TITHE_MEMBER_MATCH_LIMIT. Empty members and empty tithes returns memberRowCount 0 memberInvalidRowCount 0 memberValidRowCount 0 knownIdCount 0 titheRowCount 0 titheInvalidRowCount 0 titheValidRowCount 0 matchedCount 0 missingCount 0 unknownCount 0 unmatchedIndexes empty. Iterate members with for-of; never mutate or retain input. Each member row that is null or typeof not object or Array.isArray true counts as invalid with memberInvalidRowCount increment once and ignored for known set. Each member object increments memberValidRowCount once and is observed only via for-of over Object.entries for key id by comparing entry[0] with triple equals against id without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including fullName email phone address birthDate baptismDate status isTither notes createdAt. Access entry key and value only via literal indices entry[0] and entry[1]. If no id entry or typeof entry[1] not string or entry[1].length equals 0 then ignore for known set with no trim coercion folding translation validation or escaping. Otherwise use exact string as Map key with Map get and Map set: if Map get returns undefined then Map set and knownIdCount increment; else ignore. Iterate tithes with for-of and local index counter starting at 0; never mutate or retain input. Each tithe row that is null or typeof not object or Array.isArray true counts as invalid with titheInvalidRowCount increment once and ignored for matching and never pushed. Each tithe object increments titheValidRowCount once and is observed only via for-of over Object.entries for key memberId by comparing entry[0] with triple equals against memberId with same restrictions; every other own key is ignored without error and never copied including id memberName amount paymentMethod contributionDate status notes createdAt. If no memberId entry or typeof entry[1] not string or entry[1].length equals 0 then missingCount increment once and push index onto unmatchedIndexes with no trim coercion folding translation validation or escaping. Else use exact string with Map get on known map: if Map get returns undefined then unknownCount increment once and push index; else matchedCount increment once. After iteration unmatchedIndexes holds ascending tithe indexes. Return fresh JSON-compatible object built with object literal holding exactly memberRowCount memberInvalidRowCount memberValidRowCount knownIdCount titheRowCount titheInvalidRowCount titheValidRowCount matchedCount missingCount unknownCount unmatchedIndexes where memberRowCount equals memberValidRowCount plus memberInvalidRowCount and titheRowCount equals titheValidRowCount plus titheInvalidRowCount and titheValidRowCount equals matchedCount plus missingCount plus unknownCount. Fresh allocation per call with arrays built with array literals and push and no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Computed access only via literal nonnegative numeric indices entry[0] and entry[1]; never use array[i] or object[key]. Discarding result cancels with nothing written. Matching only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "members": [
+      {
+        "id": "m1"
+      },
+      {
+        "id": "m2"
+      }
+    ],
+    "tithes": [
+      {
+        "memberId": "m1"
+      },
+      {
+        "memberId": ""
+      },
+      {
+        "memberId": "m9"
+      }
+    ]
+  },
+  "output": {
+    "knownIdCount": 2,
+    "matchedCount": 1,
+    "memberInvalidRowCount": 0,
+    "memberRowCount": 2,
+    "memberValidRowCount": 2,
+    "missingCount": 1,
+    "titheInvalidRowCount": 0,
+    "titheRowCount": 3,
+    "titheValidRowCount": 3,
+    "unknownCount": 1,
+    "unmatchedIndexes": [
+      1,
+      2
+    ]
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "members": [
+      null,
+      {
+        "fullName": "Sintetico"
+      },
+      {
+        "id": ""
+      }
+    ],
+    "tithes": [
+      null,
+      {
+        "memberId": "m1"
+      },
+      {}
+    ]
+  },
+  "output": {
+    "knownIdCount": 0,
+    "matchedCount": 0,
+    "memberInvalidRowCount": 1,
+    "memberRowCount": 3,
+    "memberValidRowCount": 2,
+    "missingCount": 1,
+    "titheInvalidRowCount": 1,
+    "titheRowCount": 3,
+    "titheValidRowCount": 2,
+    "unknownCount": 1,
+    "unmatchedIndexes": [
+      1,
+      2
+    ]
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_tithe_member_id_match_core.test.mjs`.
