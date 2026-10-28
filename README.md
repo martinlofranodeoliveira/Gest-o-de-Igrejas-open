@@ -1924,3 +1924,96 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_tithe_status_summary_core.test.mjs`.
+
+
+<!-- community-core:tithe-member-name-consistency-core -->
+### Tithe Member Name Consistency In-Memory Core
+
+Complements the existing member import preview, tithe member groups, linkage presence and exact duplicate cores which validate rows, count presence and group repeats but do not detect the same memberId carrying different exact memberName strings before manual review. Returns only bounded linked, distinct-id and inconsistent counts plus inconsistent-id groups with no persistence, confirmation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/tithe_member_name_consistency_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_TITHE_MEMBER_NAME_CONSISTENCY_ROOT. If array length exceeds 1000 throw RangeError with message TITHE_MEMBER_NAME_CONSISTENCY_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 linkedRowCount 0 idCount 0 inconsistentIdCount 0 inconsistentRowCount 0 groups empty. Iterate payload with for-of and local index counter starting at 0 and local counters and two Maps; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for linkage counting. Each object row increments validRowCount once and is observed only via for-of over Object.entries for keys memberId and memberName by comparing entry[0] with triple equals against memberId and memberName without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id amount paymentMethod contributionDate status notes createdAt. Access entry key and value only via literal indices entry[0] and entry[1]. Computed access only via literal nonnegative numeric indices entry[0] and entry[1]; never use array variable index or object variable key. Determine linked with no trim coercion folding translation validation or escaping: if no memberId entry or typeof value not string or length equals 0 then not linked; else if no memberName entry or typeof not string or length equals 0 then not linked; else linked with exact strings. If not linked ignore for Maps. Otherwise use exact memberId string as Map key with Map get and Map set and arrays built with array literals and push: maintain indexesById Map from id to array of indices and namesById Map from id to array of distinct names in first-seen order. If Map get on indexesById returns undefined then build fresh arrays with index pushed and name pushed then Map set on both Maps; else push index onto retrieved indexes array and check distinct by for-of over retrieved names array comparing with triple equals; if no equal found then push name onto retrieved names array. Values never copied except as Map keys and names held locally during call. After iteration build groups array with push of fresh object literals each holding exactly memberId names indexes where names and indexes are fresh arrays built with push in first-seen and ascending iteration order; include only ids where distinct names length at least 2; groups ordered by first index ascending which equals first-seen order. Set linkedRowCount to count of linked rows, idCount to number of distinct ids, inconsistentIdCount to groups length and inconsistentRowCount to sum of lengths of grouped indexes arrays. Return fresh JSON-compatible object built with object literal holding exactly rowCount invalidRowCount validRowCount linkedRowCount idCount inconsistentIdCount inconsistentRowCount groups where rowCount equals validRowCount plus invalidRowCount. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding result cancels with nothing written. Grouping only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "memberId": "m1",
+      "memberName": "Ana"
+    },
+    {
+      "memberId": "m1",
+      "memberName": "Ana"
+    },
+    {
+      "memberId": "m1",
+      "memberName": "Ana Silva"
+    },
+    {
+      "memberId": "m2",
+      "memberName": "Beto"
+    }
+  ],
+  "output": {
+    "groups": [
+      {
+        "indexes": [
+          0,
+          1,
+          2
+        ],
+        "memberId": "m1",
+        "names": [
+          "Ana",
+          "Ana Silva"
+        ]
+      }
+    ],
+    "idCount": 2,
+    "inconsistentIdCount": 1,
+    "inconsistentRowCount": 3,
+    "invalidRowCount": 0,
+    "linkedRowCount": 4,
+    "rowCount": 4,
+    "validRowCount": 4
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "memberId": "",
+      "memberName": "Ana"
+    },
+    {
+      "memberId": "m1"
+    },
+    {
+      "memberId": "m1",
+      "memberName": ""
+    },
+    {
+      "memberId": "m1",
+      "memberName": "Ana"
+    }
+  ],
+  "output": {
+    "groups": [],
+    "idCount": 1,
+    "inconsistentIdCount": 0,
+    "inconsistentRowCount": 0,
+    "invalidRowCount": 1,
+    "linkedRowCount": 1,
+    "rowCount": 5,
+    "validRowCount": 4
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_tithe_member_name_consistency_core.test.mjs`.
