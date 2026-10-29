@@ -2112,3 +2112,106 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_tithe_member_id_match_core.test.mjs`.
+
+
+<!-- community-core:tithe-member-orphan-check-core -->
+### Tithe Member Orphan Check In-Memory Core
+
+Complements existing member import preview, tithe member groups, linkage presence, member-id match and member-name consistency cores which inspect single collections or single-row shapes but never join members to tithes before manual review. Gives bounded distinct member-id set with linked, orphan and missing tithe counts plus orphan indexes with no persistence, confirmation or side effects, keeping storage and follow-up decisions with the caller.
+
+Reusable deterministic JSON core: `src/lib/community/tithe_member_orphan_check_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be a non-null non-array object; otherwise throw TypeError with message INVALID_TITHE_MEMBER_ORPHAN_ROOT. Observe payload only via for-of over Object.entries for keys members and tithes by comparing entry[0] with triple equals against members and tithes without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied. Access entry key and value only via literal indices entry[0] and entry[1]. If members entry missing or its value not an array or tithes entry missing or its value not an array then throw TypeError with message INVALID_TITHE_MEMBER_ORPHAN_ROOT. If members length exceeds 1000 or tithes length exceeds 1000 throw RangeError with message TITHE_MEMBER_ORPHAN_LIMIT. Empty members and empty tithes returns memberRowCount 0 memberInvalidRowCount 0 memberValidRowCount 0 distinctMemberIdCount 0 titheRowCount 0 titheInvalidRowCount 0 titheValidRowCount 0 linkedCount 0 orphanCount 0 missingCount 0 orphanIndexes empty. Iterate members with for-of and local counters; never mutate or retain input. Each member element that is null or typeof not object or Array.isArray true counts as memberInvalidRowCount increment once and ignored for ids. Each member object increments memberValidRowCount once and is observed only via for-of over Object.entries for key id by comparing entry[0] with triple equals against id without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including fullName email phone address birthDate baptismDate status isTither notes createdAt memberId memberName amount paymentMethod contributionDate. Access entry key and value only via literal indices entry[0] and entry[1]. If no id entry exists or its value typeof not string or its length equals 0 then ignore for distinct set with no trim coercion folding translation validation or escaping. Otherwise use exact string value as Map key with Map get and Map set: if Map get returns undefined then Map set key to true and increment distinctMemberIdCount; else ignore duplicate. Values never copied except as Map keys held locally during call. Then iterate tithes with for-of and local tithe index counter starting at 0; never mutate or retain input. Each tithe element that is null or typeof not object or Array.isArray true counts as titheInvalidRowCount increment once with index counter increment once and ignored for linkage. Each tithe object increments titheValidRowCount once and is observed only via for-of over Object.entries for key memberId by comparing entry[0] with triple equals against memberId without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id memberName amount paymentMethod contributionDate status notes createdAt. If no memberId entry exists or its value typeof not string or its length equals 0 then missingCount increment once with no trim coercion folding translation validation or escaping. Otherwise exact string lookup with Map get: if result undefined then orphanCount increment once and push tithe index onto orphanIndexes built with array literal and push; else linkedCount increment once. orphanIndexes holds ascending iteration order. Set memberRowCount to memberValidRowCount plus memberInvalidRowCount and titheRowCount to titheValidRowCount plus titheInvalidRowCount; titheValidRowCount equals linkedCount plus orphanCount plus missingCount. Return fresh JSON-compatible object built with object literal holding exactly memberRowCount memberInvalidRowCount memberValidRowCount distinctMemberIdCount titheRowCount titheInvalidRowCount titheValidRowCount linkedCount orphanCount missingCount orphanIndexes. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, arrays with array literals and push, maps with Map get and set, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins, no prototype constructor access. Computed access only via literal nonnegative numeric indices entry[0] and entry[1]; never use array variable index or object variable key. Discarding the result cancels with nothing written. Linkage checking only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "members": [
+      {
+        "id": "m1"
+      },
+      {
+        "id": "m2"
+      },
+      {
+        "id": ""
+      }
+    ],
+    "tithes": [
+      {
+        "memberId": "m1"
+      },
+      {
+        "memberId": "mx"
+      },
+      {
+        "memberId": ""
+      }
+    ]
+  },
+  "output": {
+    "distinctMemberIdCount": 2,
+    "linkedCount": 1,
+    "memberInvalidRowCount": 0,
+    "memberRowCount": 3,
+    "memberValidRowCount": 3,
+    "missingCount": 1,
+    "orphanCount": 1,
+    "orphanIndexes": [
+      1
+    ],
+    "titheInvalidRowCount": 0,
+    "titheRowCount": 3,
+    "titheValidRowCount": 3
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "members": [
+      null,
+      {
+        "fullName": "Sintetico"
+      },
+      {
+        "id": "a"
+      },
+      {
+        "id": "a"
+      }
+    ],
+    "tithes": [
+      null,
+      [],
+      {
+        "memberId": "a"
+      },
+      {
+        "memberId": "b"
+      },
+      {}
+    ]
+  },
+  "output": {
+    "distinctMemberIdCount": 1,
+    "linkedCount": 1,
+    "memberInvalidRowCount": 1,
+    "memberRowCount": 4,
+    "memberValidRowCount": 3,
+    "missingCount": 1,
+    "orphanCount": 1,
+    "orphanIndexes": [
+      3
+    ],
+    "titheInvalidRowCount": 2,
+    "titheRowCount": 5,
+    "titheValidRowCount": 3
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_tithe_member_orphan_check_core.test.mjs`.
