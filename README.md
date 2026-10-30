@@ -2215,3 +2215,87 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_tithe_member_orphan_check_core.test.mjs`.
+
+
+<!-- community-core:tithe-contribution-month-totals-core -->
+### Tithe Contribution Month Totals In-Memory Core
+
+Complements existing tithe amount-totals (overall plus Confirmado/Pendente), date-groups (exact-date duplicates), exact-duplicate-groups and contribution-date-shape (format) which never bucket by calendar month for monthly review. Gives bounded groupable, ungroupable, month and total counts plus per-month YYYY-MM counts and exact amount totals from in-memory drafts before manual review, with no persistence, confirmation or side effects; caller keeps storage and follow-up decisions.
+
+Reusable deterministic JSON core: `src/lib/community/tithe_contribution_month_totals_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_TITHE_CONTRIBUTION_MONTH_TOTALS_ROOT. If array length exceeds 1000 throw RangeError with message TITHE_CONTRIBUTION_MONTH_TOTALS_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 groupableCount 0 ungroupableCount 0 monthCount 0 monthTotal 0 months empty. Iterate payload with for-of and local index counter starting at 0 plus local counters and Map plus order array; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for month work. Each object row increments validRowCount once and is observed only via for-of over Object.entries for keys contributionDate and amount by comparing entry[0] with triple equals against contributionDate and amount without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id memberId memberName paymentMethod status notes createdAt. Access entry key and value only via literal indices entry[0] and entry[1]. Computed access only via literal nonnegative numeric indices entry[0] entry[1] value[0] value[1] value[2] value[3] value[4] value[5] value[6] value[7] value[8] value[9] acc[0] acc[1]; never use array variable index or object variable key. Track hasDate dateValue hasAmount amountValue locally. No trim coercion folding translation validation or escaping. Month valid requires dateValue typeof string with length triple equals 10 and value[4] triple equals - and value[7] triple equals - and value[0] value[1] value[2] value[3] value[5] value[6] value[8] value[9] each greater than or equal to 0 and less than or equal to 9 with year not 0000 and month 01..12 and day 01..31; no leap or month-length beyond that and never using Date. Amount valid requires typeof number and Number.isFinite true and greater than 0 and less than or equal to 9007199254740991. If month invalid or amount invalid then ungroupableCount increment once. Else groupableCount increment once and monthKey built by string concatenation of value[0] value[1] value[2] value[3] dash value[5] value[6] with no string methods; insert via Map get and Map set and arrays built with array literals and push: if Map get returns undefined then Map set monthKey to fresh array holding 1 and amountValue and push monthKey onto order array; else read acc[0] acc[1] via literal indices, compute newCount newTotal, Map set monthKey to fresh array holding newCount newTotal. Values never copied except as Map keys and accumulator numbers held locally during call. After iteration build months array with push of fresh object literals holding exactly month count total by iterating order array with for-of and Map get; months ordered by first-seen which equals first index ascending. Set monthCount to months length and monthTotal to sum of totals. Return fresh JSON-compatible object built with object literal holding exactly rowCount invalidRowCount validRowCount groupableCount ungroupableCount monthCount monthTotal months where rowCount equals validRowCount plus invalidRowCount and validRowCount equals groupableCount plus ungroupableCount. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, arrays with array literals and push, maps with Map get and Map set, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding result cancels with nothing written. Grouping and totals only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render. Reusable deterministic JSON core: src/lib/community/tithe_contribution_month_totals_core.mjs, API runFeature(payload). This module is independently testable; application UI integration is outside this change.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "amount": 100,
+      "contributionDate": "2024-01-15"
+    },
+    {
+      "amount": 50,
+      "contributionDate": "2024-01-20"
+    },
+    {
+      "amount": 200,
+      "contributionDate": "2024-02-05"
+    }
+  ],
+  "output": {
+    "groupableCount": 3,
+    "invalidRowCount": 0,
+    "monthCount": 2,
+    "monthTotal": 350,
+    "months": [
+      {
+        "count": 2,
+        "month": "2024-01",
+        "total": 150
+      },
+      {
+        "count": 1,
+        "month": "2024-02",
+        "total": 200
+      }
+    ],
+    "rowCount": 3,
+    "ungroupableCount": 0,
+    "validRowCount": 3
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "amount": 10,
+      "contributionDate": ""
+    },
+    {
+      "amount": 10,
+      "contributionDate": "2024-13-01"
+    },
+    {
+      "amount": 0,
+      "contributionDate": "2024-03-10"
+    }
+  ],
+  "output": {
+    "groupableCount": 0,
+    "invalidRowCount": 1,
+    "monthCount": 0,
+    "monthTotal": 0,
+    "months": [],
+    "rowCount": 4,
+    "ungroupableCount": 3,
+    "validRowCount": 3
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_tithe_contribution_month_totals_core.test.mjs`.
