@@ -2299,3 +2299,68 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_tithe_contribution_month_totals_core.test.mjs`.
+
+
+<!-- community-core:tithe-contribution-date-range-core -->
+### Tithe Contribution Date Range In-Memory Core
+
+Complements existing tithe contribution-date-shape, date-groups, exact-duplicate-groups, amount-totals and contribution-month-totals cores which validate format, group duplicates or bucket by YYYY-MM but never report the overall period covered by in-memory drafts. Gives bounded valid missing invalid date counts plus earliest and latest YYYY-MM-DD via lexicographic comparison before manual review, with no persistence confirmation or side effects; caller keeps storage and follow-up decisions.
+
+Reusable deterministic JSON core: `src/lib/community/tithe_contribution_date_range_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_TITHE_CONTRIBUTION_DATE_RANGE_ROOT. If array length exceeds 1000 throw RangeError with message TITHE_CONTRIBUTION_DATE_RANGE_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 dateValidCount 0 dateMissingCount 0 dateInvalidCount 0 earliest empty string latest empty string. Iterate payload with for-of and local index counter starting at 0 plus local counters and earliest latest holders; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for range work. Each object row increments validRowCount once and is observed only via for-of over Object.entries for key contributionDate by comparing entry[0] with triple equals against contributionDate without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id memberId memberName amount paymentMethod status notes createdAt. Access entry key and value only via literal indices entry[0] and entry[1]. Computed access only via literal nonnegative numeric indices entry[0] entry[1] value[0] value[1] value[2] value[3] value[4] value[5] value[6] value[7] value[8] value[9]; never use array variable index or object variable key. Track hasDate dateValue locally. No trim coercion folding translation validation or escaping. Date shape valid requires dateValue typeof string with length triple equals 10 and value[4] triple equals - and value[7] triple equals - and value[0] value[1] value[2] value[3] value[5] value[6] value[8] value[9] each greater than or equal to 0 and less than or equal to 9 with year not 0000 and month 01 to 12 and day 01 to 31; no leap or month-length beyond that and never using Date. If hasDate false then dateMissingCount increment once. Else if typeof not string or shape invalid then dateInvalidCount increment once. Else dateValidCount increment once and update range via lexicographic less-than greater-than which equals chronological order for YYYY-MM-DD: if earliest triple equals empty string then set earliest and latest to dateValue; else if dateValue less-than earliest then set earliest to dateValue; if dateValue greater-than latest then set latest to dateValue. Values never copied except as earliest latest strings held locally during call. Invariants rowCount equals validRowCount plus invalidRowCount and validRowCount equals dateValidCount plus dateMissingCount plus dateInvalidCount and earliest latest empty when dateValidCount triple equals 0 else valid YYYY-MM-DD with earliest less-than-or-equal latest. Return fresh JSON-compatible object built with object literal holding exactly rowCount invalidRowCount validRowCount dateValidCount dateMissingCount dateInvalidCount earliest latest. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, arrays with array literals and push, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding result cancels with nothing written. Range only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render. Reusable deterministic JSON core: src/lib/community/tithe_contribution_date_range_core.mjs, API runFeature(payload). This module is independently testable; application UI integration is outside this change.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "contributionDate": "2024-03-10"
+    },
+    {
+      "contributionDate": "2024-01-05"
+    },
+    {
+      "contributionDate": "2024-12-20"
+    }
+  ],
+  "output": {
+    "dateInvalidCount": 0,
+    "dateMissingCount": 0,
+    "dateValidCount": 3,
+    "earliest": "2024-01-05",
+    "invalidRowCount": 0,
+    "latest": "2024-12-20",
+    "rowCount": 3,
+    "validRowCount": 3
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {},
+    {
+      "contributionDate": "2024-13-01"
+    },
+    {
+      "contributionDate": "2024-05-06"
+    }
+  ],
+  "output": {
+    "dateInvalidCount": 1,
+    "dateMissingCount": 1,
+    "dateValidCount": 1,
+    "earliest": "2024-05-06",
+    "invalidRowCount": 1,
+    "latest": "2024-05-06",
+    "rowCount": 4,
+    "validRowCount": 3
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_tithe_contribution_date_range_core.test.mjs`.
