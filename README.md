@@ -2639,3 +2639,85 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_member_import_invariant_check_core.test.mjs`.
+
+
+<!-- community-core:tithe-contribution-month-gap-core -->
+### Tithe Contribution Month Gap In-Memory Core
+
+Helps a local treasurer or developer reviewing synthetic tithe drafts shaped like src/types.ts Tithe contributionDate spot missing calendar months between the earliest and latest valid dates before manual review by returning sorted covered months, missing months, counts and a continuous flag with no persistence. Complements existing tithe_contribution_month_totals which sums amounts per month, tithe_contribution_date_range which reports min/max dates, tithe_contribution_date_shape which validates single dates and tithe_date_groups which groups indexes by exact date, plus memberImportPreview which validates member strings but never enumerates absent months; differs from prior rounding/order and linkage cores by interval-coverage triage.
+
+Reusable deterministic JSON core: `src/lib/community/tithe_contribution_month_gap_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_TITHE_CONTRIBUTION_MONTH_GAP_ROOT. If array length exceeds 1000 throw RangeError with message TITHE_CONTRIBUTION_MONTH_GAP_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 malformedDateCount 0 validDateCount 0 monthCount 0 minMonth "" maxMonth "" coveredMonths [] missingMonths [] missingCount 0 continuous true. Iterate payload with for-of and local index counter starting at 0; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true counts as invalid with invalidRowCount increment once and ignored for date work. Each object row increments validRowCount once and is observed only via for-of over Object.entries for key contributionDate by comparing entry[0] with triple equals against contributionDate without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id memberId memberName amount paymentMethod status notes createdAt. Access entry key and value only via literal indices entry[0] and entry[1]; computed access only via literal nonnegative numeric indices; never use array variable index or object variable key. Track hasDate dateValue locally. No trim coercion folding translation validation or escaping. If hasDate false or typeof dateValue not string then malformedDateCount increment once. Else validate exact YYYY-MM-DD without Date: length 10 with dashes at fixed positions checked via direct length/slice, split on "-" directly then for-of over parts with position counter to obtain yearText monthText dayText without variable computed access, check lengths 4/2/2, check each char is 0-9 via for-of triple equals, convert with Number directly, require year 100..9999 month 1..12 day 1..31 with month limits 31 for 1/3/5/7/8/10/12 and 30 for 4/6/9/11 and Feb 28 or 29 if leap where leap is year %400===0 or year %4===0 and year %100!==0; any failure increments malformedDateCount once. Else validDateCount increment once, derive monthKey as yearText+"-"+monthText, use Map get/set directly: if get returns undefined then set monthKey to true and increment monthCount and update minMonth/maxMonth via lexicographic < > with first valid initializing both; else ignore duplicate. Values never copied except Map keys held locally. After iteration if validDateCount===0 return empties above with continuous true. Else parse min/max year/month with Number directly on slice parts, compute totalSpan as (maxYear-minYear)*12+(maxMonth-minMonth)+1; if totalSpan exceeds 1200 throw RangeError with message TITHE_CONTRIBUTION_MONTH_GAP_SPAN to keep output within transport limits. Else walk cursor year/month from min to max with bounded while advancing month then year, checking Map get directly: if defined push monthKey onto coveredMonths else onto missingMonths via push in ascending chronological order. Set missingCount to missingMonths length and continuous to true only if missingCount===0 else false. Invariants rowCount equals validRowCount plus invalidRowCount and validRowCount equals malformedDateCount plus validDateCount and monthCount equals coveredMonths length and missingCount equals missingMonths length and totalSpan equals monthCount plus missingCount. Return fresh JSON-compatible object built with object literal holding exactly rowCount invalidRowCount validRowCount malformedDateCount validDateCount monthCount minMonth maxMonth coveredMonths missingMonths missingCount continuous. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, arrays with array literals and push, maps with set, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding result cancels with nothing written. Gap triage only with no persistence confirmation financial action identity deliverability validation or authority; caller keeps storage and must escape text on render. Reusable deterministic JSON core src/lib/community/tithe_contribution_month_gap_core.mjs API runFeature(payload). Independently testable; application UI integration is outside this change.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "contributionDate": "2024-01-15"
+    },
+    {
+      "contributionDate": "2024-03-10"
+    },
+    {
+      "contributionDate": "2024-03-20"
+    }
+  ],
+  "output": {
+    "continuous": false,
+    "coveredMonths": [
+      "2024-01",
+      "2024-03"
+    ],
+    "invalidRowCount": 0,
+    "malformedDateCount": 0,
+    "maxMonth": "2024-03",
+    "minMonth": "2024-01",
+    "missingCount": 1,
+    "missingMonths": [
+      "2024-02"
+    ],
+    "monthCount": 2,
+    "rowCount": 3,
+    "validDateCount": 3,
+    "validRowCount": 3
+  }
+}
+```
+
+```json
+{
+  "input": [
+    {
+      "contributionDate": "2024-05-01"
+    },
+    {
+      "contributionDate": "bad"
+    },
+    null,
+    {
+      "memberId": "x"
+    }
+  ],
+  "output": {
+    "continuous": true,
+    "coveredMonths": [
+      "2024-05"
+    ],
+    "invalidRowCount": 1,
+    "malformedDateCount": 2,
+    "maxMonth": "2024-05",
+    "minMonth": "2024-05",
+    "missingCount": 0,
+    "missingMonths": [],
+    "monthCount": 1,
+    "rowCount": 4,
+    "validDateCount": 1,
+    "validRowCount": 3
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_tithe_contribution_month_gap_core.test.mjs`.
