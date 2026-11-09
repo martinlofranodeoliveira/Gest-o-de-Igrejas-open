@@ -2508,3 +2508,134 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_member_birth_month_groups_core.test.mjs`.
+
+
+<!-- community-core:member-import-invariant-check-core -->
+### Member Import Preview Invariant Check In-Memory Core
+
+Helps a developer locally verify synthetic result objects shaped like src/services/memberImportPreview.ts output before manual review by recomputing counts from the rows array and checking index order. Complements the existing preview which validates each member draft alone and the duplicate presence shape and birth-month cores which operate on draft arrays but never check declared rowCount validCount invalidCount canImport consistency. Returns recomputed counts plus canImportExpected declaredConsistent violationCount and mismatchedIndexes with no persistence confirmation or side effects; caller keeps storage and follow-up decisions.
+
+Reusable deterministic JSON core: `src/lib/community/member_import_invariant_check_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no I/O, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be non-null object and not array; otherwise throw TypeError with message INVALID_MEMBER_IMPORT_INVARIANT_ROOT. Observe payload only via for-of over Object.entries for keys rowCount validCount invalidCount canImport rows by comparing entry[0] with triple equals without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key ignored without error and never copied. Access entry key and value only via literal indices entry[0] and entry[1]. Computed access only via literal nonnegative numeric indices; never use array variable index or object variable key. If hasRows false or rowsValue Array.isArray false then throw TypeError with message INVALID_MEMBER_IMPORT_INVARIANT_ROWS. If rowsValue length exceeds 250 throw RangeError with message MEMBER_IMPORT_INVARIANT_LIMIT. Empty rows returns rowCount 0 validCount 0 invalidCount 0 malformedCount 0 canImportExpected false with declaredConsistent from declarations. Iterate rowsValue with for-of and local index counter starting at 0; never mutate or retain input. Each row that is null or typeof not object or Array.isArray true increments malformedCount once and ignored for valid invalid counts. Each object row observed only via for-of over Object.entries for keys index status without computed variable access or builtin aliasing; every other own key ignored without error and never copied including data issues fullName email phone address birthDate baptismDate status isTither notes id createdAt. Track hasIndex indexValue hasStatus statusValue locally. No trim coercion folding translation validation escaping or deliverability checks. If hasStatus false or statusValue triple not equals valid and triple not equals invalid then malformedCount increment once. Else if statusValue triple equals valid then validCount increment once else invalidCount increment once. Separately for object rows if hasIndex false or typeof indexValue not number or indexValue triple not equals iteration position then indexMismatchCount increment once with position pushed via push onto mismatchedIndexes in ascending order. After iteration set rowCount to rowsValue length and canImportExpected to true only if rowCount greater than 0 and invalidCount triple equals 0 and malformedCount triple equals 0 else false. Set declaredConsistent to true only if hasRowCount hasValid hasInvalid hasCanImport all true and typeof rowCountValue number and validValue number and invalidValue number and canImportValue boolean and rowCountValue triple equals rowCount and validValue triple equals validCount and invalidValue triple equals invalidCount and canImportValue triple equals canImportExpected else false. Set violationCount to declaredViolation plus indexMismatchCount plus malformedCount where declaredViolation is 0 if declaredConsistent true else 1. Invariants rowCount equals validCount plus invalidCount plus malformedCount and indexMismatchCount equals mismatchedIndexes length. Return fresh JSON-compatible object built with object literal holding exactly rowCount validCount invalidCount malformedCount canImportExpected declaredConsistent indexMismatchCount violationCount mismatchedIndexes. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, arrays with array literals and push, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding result cancels with nothing written. Invariant triage only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and must escape text on render. Independently testable; application UI integration is outside this change. Reusable deterministic JSON core src/lib/community/member_import_invariant_check_core.mjs API runFeature(payload).
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "canImport": false,
+    "invalidCount": 1,
+    "rowCount": 2,
+    "rows": [
+      {
+        "data": {
+          "fullName": "Maria Sintetica"
+        },
+        "index": 0,
+        "status": "valid"
+      },
+      {
+        "index": 1,
+        "issues": [
+          {
+            "code": "REQUIRED",
+            "field": "fullName"
+          }
+        ],
+        "status": "invalid"
+      }
+    ],
+    "validCount": 1
+  },
+  "output": {
+    "canImportExpected": false,
+    "declaredConsistent": true,
+    "indexMismatchCount": 0,
+    "invalidCount": 1,
+    "malformedCount": 0,
+    "mismatchedIndexes": [],
+    "rowCount": 2,
+    "validCount": 1,
+    "violationCount": 0
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "canImport": true,
+    "invalidCount": 0,
+    "rowCount": 2,
+    "rows": [
+      {
+        "data": {},
+        "index": 0,
+        "status": "valid"
+      },
+      {
+        "index": 1,
+        "issues": [
+          {
+            "code": "ROW_TYPE",
+            "field": null
+          }
+        ],
+        "status": "invalid"
+      }
+    ],
+    "validCount": 2
+  },
+  "output": {
+    "canImportExpected": false,
+    "declaredConsistent": false,
+    "indexMismatchCount": 0,
+    "invalidCount": 1,
+    "malformedCount": 0,
+    "mismatchedIndexes": [],
+    "rowCount": 2,
+    "validCount": 1,
+    "violationCount": 1
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "canImport": false,
+    "invalidCount": 1,
+    "rowCount": 3,
+    "rows": [
+      {
+        "data": {},
+        "index": 0,
+        "status": "valid"
+      },
+      null,
+      {
+        "data": {},
+        "index": 5,
+        "status": "valid"
+      }
+    ],
+    "validCount": 2
+  },
+  "output": {
+    "canImportExpected": false,
+    "declaredConsistent": false,
+    "indexMismatchCount": 1,
+    "invalidCount": 0,
+    "malformedCount": 1,
+    "mismatchedIndexes": [
+      2
+    ],
+    "rowCount": 3,
+    "validCount": 2,
+    "violationCount": 3
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_member_import_invariant_check_core.test.mjs`.
