@@ -2417,3 +2417,94 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `lab_tests/community_tithe_contribution_date_range_core.test.mjs`.
+
+
+<!-- community-core:member-birth-month-groups-core -->
+### Member Birth Month Groups In-Memory Core
+
+Complements existing birthdate-shape and date-presence cores plus memberImportPreview which validate each birthDate alone but never group birthdays, and tithe month totals which groups contributions but not birthdays. Gives bounded missing plus invalid plus with-birthday counts plus month-ordered groups with indexes for pastoral birthday planning before manual review, with no persistence confirmation or side effects; caller keeps storage and follow-up decisions.
+
+Reusable deterministic JSON core: `src/lib/community/member_birth_month_groups_core.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+Pure in-memory deterministic core exposing runFeature(payload) with no IO, env, time, randomness, callbacks, dependencies, imports, classes, async, this, reflection or mutable module variables and never using Date. Payload must be an array of row values; otherwise throw TypeError with message INVALID_MEMBER_BIRTH_MONTH_ROOT. If array length exceeds 1000 throw RangeError with message MEMBER_BIRTH_MONTH_LIMIT. Empty array returns rowCount 0 invalidRowCount 0 validRowCount 0 missingCount 0 invalidDateCount 0 withBirthdayCount 0 groupCount 0 groups empty. Iterate payload with for-of and local index counter starting at 0; never mutate or retain input. Each row that is null or typeof not object or Array isArray true counts as invalid with invalidRowCount increment once and ignored for month work. Each object row increments validRowCount once and is observed only via for-of over Object.entries for key birthDate by comparing entry key with triple equals against birthDate without computed variable access, aliasing builtins, passing builtins as callbacks, prototype or constructor access; every other own key is ignored without error and never copied including id fullName email phone address baptismDate status isTither notes createdAt. Access entry key and value only via literal indices entry with 0 and entry with 1. Computed access only via literal nonnegative numeric indices for entry positions 0 and 1 and value positions 0 1 2 3 4 5 6 7 8 9; never use array variable index or object variable key. Track hasBirth birthValue locally. No trim coercion folding translation validation or escaping. If hasBirth false then missingCount increment once. Else if birthValue typeof string and birthValue triple equals empty string then missingCount increment once. Else if birthValue typeof not string then invalidDateCount increment once. Else shape check requires length triple equals 10 and dash at positions 4 and 7 and digits at positions 0 1 2 3 5 6 8 9 with year not 0000 and month 01 to 12 and day 01 to 31; no leap or month length beyond that and never using Date; if fails then invalidDateCount increment once. Else valid birthday with withBirthdayCount increment once and monthKey built as two characters at positions 5 plus 6 exact used as Map key with Map get and Map set and arrays built with array literals and push: if Map get returns undefined then build fresh array with index pushed then Map set; else push index onto retrieved array. Values never copied except as Map keys held locally during call. After iteration build groups array with push of fresh objects holding month count indexes in ascending month order by iterating fixed twelve strings 01 02 03 04 05 06 07 08 09 10 11 12 with for-of and Map get; if found then push object literal with month count equal to indexes length and indexes in ascending iteration order. Set groupCount to groups length. Invariants rowCount equals validRowCount plus invalidRowCount and validRowCount equals missingCount plus invalidDateCount plus withBirthdayCount and withBirthdayCount equals sum of counts and groupCount equals groups length. Return fresh JSON compatible object built with object literal holding exactly rowCount invalidRowCount validRowCount missingCount invalidDateCount withBirthdayCount groupCount groups. Fresh allocation per call with no IDs timestamps globals or mutation. Build objects with object literals, arrays with array literals and push, maps with set, no variable computed access, no property assignment update delete or Object assign create, no reassignment of builtins, no aliasing or callback builtins. Discarding result cancels with nothing written. Birthday triage only with no persistence confirmation identity deliverability validation or authority; caller keeps storage and follow-up decisions and must escape text on render.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": [
+    {
+      "birthDate": "2000-01-15"
+    },
+    {
+      "birthDate": "1999-03-02"
+    },
+    {
+      "birthDate": ""
+    }
+  ],
+  "output": {
+    "groupCount": 2,
+    "groups": [
+      {
+        "count": 1,
+        "indexes": [
+          0
+        ],
+        "month": "01"
+      },
+      {
+        "count": 1,
+        "indexes": [
+          1
+        ],
+        "month": "03"
+      }
+    ],
+    "invalidDateCount": 0,
+    "invalidRowCount": 0,
+    "missingCount": 1,
+    "rowCount": 3,
+    "validRowCount": 3,
+    "withBirthdayCount": 2
+  }
+}
+```
+
+```json
+{
+  "input": [
+    null,
+    {
+      "birthDate": "2023-13-01"
+    },
+    {
+      "birthDate": "2020-02-29",
+      "fullName": "Ana"
+    },
+    {
+      "birthDate": 123
+    }
+  ],
+  "output": {
+    "groupCount": 1,
+    "groups": [
+      {
+        "count": 1,
+        "indexes": [
+          2
+        ],
+        "month": "02"
+      }
+    ],
+    "invalidDateCount": 2,
+    "invalidRowCount": 1,
+    "missingCount": 0,
+    "rowCount": 4,
+    "validRowCount": 3,
+    "withBirthdayCount": 1
+  }
+}
+```
+
+Public regression tests: `lab_tests/community_member_birth_month_groups_core.test.mjs`.
